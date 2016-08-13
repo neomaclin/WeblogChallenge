@@ -1,4 +1,4 @@
-import models.elb.{ELBLogEntry, _}
+import models.elb._
 import models.session._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -21,37 +21,28 @@ object WebBlogChallenge {
 
     val entries: RDD[ELBLogEntry] = logData.map(parseEntry)
 
-    println(entries.collect())
+    val userSessions: RDD[(String, List[List[ELBLogEntry]])] =
+      entries
+        .groupBy(_.clientPort.ip)
+        .mapValues(entries => sessionize[ELBLogEntry](entries.toList, entryTimeOut(_,_,SessionWindow)))
 
-//    val userSessions =
-//      entries
-//        .groupBy(_.clientPort.ip)
-//        .mapValues(entries => sessionize[ELBLogEntry](entries.toList, entryTimeOut(_,_,SessionWindow)))
-//
-//    userSessions.persist()
-//
-//    println(userSessions)
+    userSessions.persist()
 
-   // sc.stop()
-    //
-//
-//    val userAvgSessionTimeinMills = userSessions.mapValues(sessions => sessionAvg(sessions, durationInMills))
-//    val userAvgSessionTimeinSecs = userSessions.mapValues(sessions => sessionAvg(sessions, durationInSecs))
-//    val userAvgSessionTimeinMins = userSessions.mapValues(sessions => sessionAvg(sessions, durationInMins))
-//
-//    val userSessionHits = userSessions.mapValues(sessions => sessions.map(hitsPerSession))
-//
-//
-//    val userEngagements = userSessions.mapValues(sessions => sessions.map(session => sessionDuration(session, durationInMins)).max)
-//    val mostEngagedUser = userEngagements.sortBy(_._2, ascending = false).first()._1
-//
-//
-//    println(userSessions)
+    val allSessions = userSessions.flatMap(_._2)
+    val avgSessionTimeInMills = allSessions.map(session => sessionDuration(session, durationInMills)).reduce(_+_) / allSessions.count
+
+
+    //val uniqueURLvisitsSession = allSessions.map(session => session.map(_.request.URL).distinct.length )
+    val userEngagements = userSessions.mapValues(sessions => sessions.map(session => sessionDuration(session, durationInMills)).max)
+    val mostEngagedUser = userEngagements.sortBy(_._2, ascending = false).first()._1
+
+    println("Total number of entry is：" + entries.count())
+    println("Total distinct IP count is :" + userSessions.count)
+    println("Total number of sessions is :" + allSessions.count)
+    println("Average time of sessions measured in milliseconds is :" + avgSessionTimeInMills )
+    //println("unique URL visits per session is [" + uniqueURLvisitsSession.collect().mkString(", ")+"]")
+    println("most engaged ip is ：" + mostEngagedUser)
+
   }
-
-//  def hitsPerSession(session: Session[ELBLogEntry]): Map[String, Int] = {
-//    session.map(entry => entry.request.URL).groupBy(Predef.identity).mapValues(_.length)
-//  }
-
 
 }

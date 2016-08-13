@@ -15,9 +15,21 @@ class SessionSpec  extends Specification {
       val original = List(1, 2, 3, 20, 21, 23)
       val result = List(List(1, 2, 3), List(20, 21, 23))
 
-      def isSessionTmeOut(last: Int, entry: Int) = entry - last > 18
+      def isSessionTmeOut(last: Int, entry: Int) = (entry - last) > 15
 
       sessionize[Int](original, isSessionTmeOut) mustEqual result
+    }
+
+  }
+
+  "sessionDuration function " should {
+    "be able determined the duration by first and last entry of a given session" in {
+
+      val session = List(1, 2, 3, 4, 12, 20)
+
+      def diff(first: Int, last: Int) = last - first
+
+      sessionDuration[Int](session, diff) mustEqual 19
     }
 
   }

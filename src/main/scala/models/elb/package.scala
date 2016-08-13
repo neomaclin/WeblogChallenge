@@ -6,8 +6,9 @@ import org.joda.time.format.DateTimeFormat
 package object elb {
 
   val EntryDateFormat = DateTimeFormat.forPattern("YYYY-MM-DD'T'HH:mm:ss.SSSSSS'Z'")
-  val ELBEntryPattern = """(\S+) (\S+) (\S+) (\S+) (\d+\.\d+) (\d+\.\d+) (\d+\.\d+) (\d+) (\d+) (\d+) (\d+) "(.+)" "(.+)" (\S+) (\S+)""".r
+  val ELBEntryPattern = """(\S+) (\S+) (\S+) (\S+) (\S+) (\S+) (\S+) (\d+) (\d+) (\d+) (\d+) "(.*)" "(.*)" (\S+) (\S+)""".r
   val RequestPattern = """(\w+) (\S+) (\S+)""".r
+  val AddressPattern = """(\S+):(\d+)""".r
 
   case class Address(ip: String, port: Int)
   case class Request(method: String, URL: String, httpProtocal: String)
@@ -15,7 +16,7 @@ package object elb {
   case class ELBLogEntry(timeStamp: DateTime, //2015-07-22T09:00:27.894580Z
                          elb: String, //marketpalce-shop
                          clientPort: Address, //203.91.211.44:51402
-                         backendPort: Address, //10.0.4.150:80
+                         backendPort: Address, //10.0.4.150:80 or "-" for request that didn't reach backend
                          requestProcessTime: Double, // 0.000024
                          backendProcessTime: Double, // 0.15334
                          responseProcessTime: Double, // 0.000026
@@ -52,11 +53,17 @@ package object elb {
       elbStatusCodeRaw, backendStatusCodeRaw, receivedByte, sentByte, request, userAgent, sslCiphersRaw, slProtocolRaw)
   }
 
-  private def parseAddress(s: String): Address = { val Array(ip,port) = s.split(":") ; Address(ip, port.toInt) }
+  private def parseAddress(s: String): Address = {
+    s match {
+      case "-" => Address("0.0.0.0", 0)
+      case AddressPattern(ip, port) => Address(ip, port.toInt)
+    }
+  }
+
   private def parseLocalDateTime(s: String): DateTime = DateTime.parse(s, EntryDateFormat)
 
   def entryTimeOut(lastEntry: ELBLogEntry, entry: ELBLogEntry, windowSize: Int): Boolean = {
-    Minutes.minutesBetween(lastEntry.timeStamp, entry.timeStamp).getMinutes < windowSize
+    Math.abs(Minutes.minutesBetween(lastEntry.timeStamp, entry.timeStamp).getMinutes) > windowSize
   }
 
   def durationInMills(first: ELBLogEntry, last: ELBLogEntry): Long = {

@@ -29,7 +29,7 @@ object WebBlogChallenge {
     userSessions.persist()
 
     val allSessions = userSessions.flatMap(_._2)
-    val avgSessionTimeInMills = allSessions.map(session => sessionDuration(session, durationInMills)).reduce(_+_) / allSessions.count
+    val avgSessionTimeInMills = allSessions.map(seesion => sessionDuration[ELBLogEntry](seesion, durationInMills)).reduce(_+_) / allSessions.count
 
 
     //val uniqueURLvisitsSession = allSessions.map(session => session.map(_.request.URL).distinct.length )

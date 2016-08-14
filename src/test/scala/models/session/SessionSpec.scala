@@ -18,6 +18,7 @@ class SessionSpec  extends Specification {
       def isSessionTmeOut(last: Int, entry: Int) = (entry - last) > 15
 
       sessionize[Int](original, isSessionTmeOut) mustEqual result
+      sessionize[Int](Nil, isSessionTmeOut) mustEqual Nil
     }
 
   }

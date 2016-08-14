@@ -11,8 +11,8 @@ package object session {
   //each session is just a list of original entries given that the difference between 2 nearby entries does
   //no excess the session window
   def sessionize[T](entries: List[T], excessSessionWindow: (T, T) => Boolean): List[List[T]] = {
-    entries.foldLeft(List[List[T]](Nil)) {
-      case (List(Nil), entry) => List(entry :: Nil)
+    entries.foldLeft(List[List[T]]()) {
+      case (Nil, entry) => List(entry :: Nil)
       case (sessions@(initSessions :+ (init :+ lastEntry)), entry) =>
         if (excessSessionWindow(lastEntry, entry)) sessions :+ (entry :: Nil)
         else initSessions :+ (init :+ lastEntry :+ entry)
